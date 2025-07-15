@@ -5,9 +5,13 @@ type RedisObject = {
     [key: string]: number;
 }
 
+type SeenIndex = {
+    number: number;
+}
+
 function Fib() {
     const [indexValues, setIndexValues] = useState<RedisObject>({});
-    const [indexes, setIndexes] = useState([]);
+    const [indexes, setIndexes] = useState<SeenIndex[]>([]);
     const [indexInput, setIndexInput] = useState('');
 
 
