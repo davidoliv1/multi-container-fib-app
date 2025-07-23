@@ -2,12 +2,13 @@ import { keys } from './keys.js';
 import redis from 'redis';
 
 const redisClient = redis.createClient({
-    host: keys.redisHost,
-    port: keys.redisPort,
-    retry_strategy: () => 1000,
+  url: `redis://${keys.redisHost}:${keys.redisPort}`,
 });
 
 const sub = redisClient.duplicate();
+
+await redisClient.connect();
+await sub.connect();
 
 function fib(index) {
     if(index < 2) {
@@ -16,8 +17,8 @@ function fib(index) {
     return fib(index - 1) + fib(index - 2);
 }
 
-sub.on('message', (channel, message) => {
-    redisClient.hSet('values', message, fib(parseInt(message)));
+await sub.subscribe('insert', async (message) => {
+  const index = parseInt(message);
+  const result = fib(index);
+  await redisClient.hSet('values', index, result);
 });
-
-sub.subscribe('insert');

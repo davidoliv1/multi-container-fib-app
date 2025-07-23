@@ -28,29 +28,25 @@ pgClient.on("connect", (client) => {
 });
 
 const redisClient = redis.createClient({
-  host: keys.redisHost,
-  port: keys.redisPort,
-  retry_strategy: () => 1000
+  url: `redis://${keys.redisHost}:${keys.redisPort}`,
 });
 
 const redisPublisher = redisClient.duplicate();
 
-app.get('/', (req, res) => {
-  res.send('Hi');
-});
+await redisClient.connect();
+await redisPublisher.connect();
 
-app.get('/values/all', async (req, res) => {
+app.get('/api/values/all', async (req, res) => {
   const values = await pgClient.query('SELECT * from values');
   res.send(values.rows);
 });
 
-app.get('/values/current', async () => {
-  redisClient.hGetAll('values', (err, values) => {
-    res.send(values);
-  });
+app.get('/api/values/current', async (req, res) => {
+   const values = await redisClient.hGetAll('values');
+   res.send(values);
 });
 
-app.post('/values', async (req, res) => {
+app.post('/api/values', async (req, res) => {
   const { index } = req.body;
 
   if(parseInt(index) > 40) {
@@ -59,7 +55,7 @@ app.post('/values', async (req, res) => {
 
   redisClient.hSet('values', index, 'Nothing yet!');
   redisPublisher.publish('insert', index);
-  pgClient.query('INSER INTO values(number) VALUES ($1)', [index]);
+  pgClient.query('INSERT INTO values(number) VALUES ($1)', [index]);
 
   res.send({ working: true });
 });
